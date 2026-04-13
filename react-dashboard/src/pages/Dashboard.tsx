@@ -28,28 +28,20 @@ const Dashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    getProducts()
+    setLoading(true);
+    getProducts(debouncedSearch)
       .then((data) => {
         setProducts(data);
+        setError("");
       })
       .catch(() => setError("Failed to fetch products. Please try again later."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [debouncedSearch]);
 
   const filteredAndSortedProducts = useMemo(() => {
     let result = [...products];
 
-    // Filter
-    if (debouncedSearch) {
-      const lowerSearch = debouncedSearch.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.title.toLowerCase().includes(lowerSearch) ||
-          p.category.toLowerCase().includes(lowerSearch)
-      );
-    }
-
-    // Sort
+    // Search filter is now handled server-side, so we just sort the returned results
     if (sort === "price-asc") {
       result.sort((a, b) => a.price - b.price);
     } else if (sort === "price-desc") {
@@ -59,7 +51,7 @@ const Dashboard = () => {
     }
 
     return result;
-  }, [debouncedSearch, sort, products]);
+  }, [sort, products]);
 
   const totalPages = Math.ceil(filteredAndSortedProducts.length / ITEMS_PER_PAGE);
   const currentProducts = filteredAndSortedProducts.slice(
@@ -72,40 +64,12 @@ const Dashboard = () => {
     setCurrentPage(1);
   }, [debouncedSearch, sort]);
 
-  if (loading) {
-    return (
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center min-h-[50vh]">
-        <div className="flex flex-col items-center text-slate-500 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-          <p className="font-medium animate-pulse">Loading inventory...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center min-h-[50vh]">
-        <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl flex flex-col items-center gap-3 max-w-md text-center shadow-sm">
-          <AlertCircle className="w-10 h-10 text-red-500" />
-          <p className="font-medium">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Vehicles & Products</h1>
-          <p className="text-slate-500 mt-1">Browse our extensive inventory of {products.length} items</p>
+          <p className="text-slate-500 mt-1">Browse our extensive inventory of items</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -140,7 +104,27 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {currentProducts.length === 0 ? (
+      {loading ? (
+        <div className="flex-1 w-full py-24 flex items-center justify-center min-h-[50vh]">
+          <div className="flex flex-col items-center text-slate-500 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <p className="font-medium animate-pulse">Loading inventory...</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="flex-1 w-full py-24 flex items-center justify-center min-h-[50vh]">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-2xl flex flex-col items-center gap-3 max-w-md text-center shadow-sm">
+            <AlertCircle className="w-10 h-10 text-red-500" />
+            <p className="font-medium">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      ) : currentProducts.length === 0 ? (
         <div className="bg-white border text-center py-24 rounded-2xl shadow-sm border-slate-200">
           <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900">No products found</h3>
